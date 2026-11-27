@@ -1,5 +1,5 @@
 # --- 비밀값 (절대 커밋 금지) ---
-firmware/config.h
+firmware/iceguard/config.h
 server/.env
 client/.env
 client/.env.local
