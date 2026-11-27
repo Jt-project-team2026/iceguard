@@ -36,6 +36,9 @@ iceguard/
 
 - [API 명세](docs/api-spec.md)
 - [상태머신 / 결빙 단계 기준](docs/state-machine.md)
+- [서버 실행](docs/server-setup.md)
+- [ESP32 펌웨어](docs/firmware-setup.md)
+- [배포 가이드 (Render + Vercel)](docs/deploy.md)
 
 ## 보안 안내
 

@@ -1,0 +1,49 @@
+# Render Blueprint: 서버(Django) + 무료 PostgreSQL
+# 사용법은 docs/deploy.md 참고
+services:
+  - type: web
+    name: iceguard-api
+    runtime: python
+    plan: free
+    region: singapore          # 한국에서 가장 가까운 리전
+    rootDir: server
+    buildCommand: bash build.sh
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: iceguard-db
+          property: connectionString
+      - key: NUM_PROXIES
+        value: "1"
+      - key: OFFLINE_SEC
+        value: "25"
+      # Vercel 배포 주소가 정해지면 대시보드에서 바꾼다. (여러 개는 쉼표로 구분, 끝에 / 없이)
+      - key: CORS_ALLOWED_ORIGINS
+        value: http://localhost:5173
+      # 시연 장치 정보 (빌드 때 자동 등록/갱신)
+      - key: DEVICE_ID
+        value: iceguard-01
+      - key: DEVICE_NAME
+        value: 정문 오르막
+      - key: DEVICE_LAT
+        value: "0"
+      - key: DEVICE_LNG
+        value: "0"
+      # 비밀값: Blueprint 생성 화면에서 직접 입력 (git 에 올라가지 않음)
+      - key: API_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+databases:
+  - name: iceguard-db
+    plan: free
+    region: singapore
