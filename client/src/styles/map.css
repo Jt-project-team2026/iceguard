@@ -1,0 +1,175 @@
+/* ---- 지도 위 핀 (사용자/관리자 공용) ---- */
+.pin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #3a1f1b;
+}
+.pin__dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--pin);
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(58, 31, 27, 0.35);
+}
+.pin--real .pin__dot {
+  width: 56px;
+  height: 56px;
+  border-width: 4px;
+}
+.pin--mock {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px dashed var(--pin);
+}
+.pin--mock .pin__dot {
+  width: 32px;
+  height: 32px;
+  box-shadow: none;
+}
+.pin__halo {
+  position: absolute;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--pin);
+  opacity: 0.22;
+  pointer-events: none;
+}
+.pin.is-selected .pin__dot {
+  box-shadow: 0 0 0 3px #3a1f1b, 0 3px 10px rgba(58, 31, 27, 0.35);
+}
+.pin__label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translate(-50%, 2px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  border-radius: 999px;
+  background: #3a1f1b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(58, 31, 27, 0.3);
+}
+.pin__label em {
+  font-style: normal;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #3e73e8;
+  font-size: 11px;
+}
+.pin__tag {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, 2px);
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px dashed #9a7a74;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a3d38;
+  white-space: nowrap;
+}
+
+/* ---- 간단 지도 / 로딩 ---- */
+.fmap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f4e6e3;
+}
+.fmap__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.fmap__pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+.fmap__note {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  font-weight: 500;
+  color: #5a3d38;
+}
+.map-loading {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: #f4e6e3;
+  color: #6b4a45;
+  font-size: 14px;
+}
+
+/* ---- 범례 / 구간 모양 ---- */
+.legend {
+  position: absolute;
+  z-index: 10;
+  left: 16px;
+  right: 16px;
+  top: 72px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: none;
+}
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(58, 31, 27, 0.12);
+  font-size: 12px;
+  font-weight: 500;
+  color: #3a1f1b;
+}
+.legend__shape {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+}
+.shape-safe {
+  border-radius: 50%;
+  background: #12794a;
+}
+.shape-caution {
+  background: #f2b705;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.shape-danger {
+  background: #c62d20;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+}
+.shape-offline {
+  height: 4px;
+  border-radius: 2px;
+  background: #5b6675;
+}
