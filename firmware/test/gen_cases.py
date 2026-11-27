@@ -2,7 +2,7 @@
 """펌웨어 상태머신 검증용 입력/기대값 생성기.
 
 server/scripts/simulate.py 의 HeaterMachine(기준 구현)에 무작위 입력을 넣어
-"시각(초),온도,습도,센서정상,패드온도,기대상태,기대단계" 를 CSV 로 출력한다.
+"시각(초),온도,습도,센서정상,패드온도,기대상태,기대단계,수동모드,모드종료시각(초)" 를 CSV 로 출력한다.
 check_logic.cpp 가 같은 입력을 펌웨어 로직에 넣어 결과를 비교한다.
 
 사용: python gen_cases.py <demo|real> [seed] [steps]
@@ -33,6 +33,7 @@ def main() -> None:
     temp, hum, mat_mode = 8.0, 55.0, "none"
     hold = 0
     bad_run = 0
+    mode, until = "AUTO", 0
     for now in range(steps):
         if hold <= 0:  # 같은 환경을 한동안 유지해야 쿨다운/최대작동 같은 시간 규칙이 검증된다
             temp, hum = rng.choice(temps), rng.choice(hums)
@@ -47,11 +48,15 @@ def main() -> None:
             ok = False
         else:
             ok = True
+        if rng.random() < 0.01:  # 관리자가 수동 모드를 바꾼다 (펌웨어는 응답마다 같은 값을 다시 받는다)
+            mode = rng.choice(["AUTO", "FORCE_ON", "FORCE_OFF", "FORCE_ON"])
+            until = 0 if mode == "AUTO" else now + rng.randint(5, 90 if profile == "demo" else 900)
         mat = {"none": None, "normal": rng.choice([20.0, 35.5, 59.5]), "hot": rng.choice([59.5, 60.0, 61.5])}[mat_mode]
 
+        machine.set_mode(mode, float(until))
         machine.update(float(now), temp, hum, ok, mat)
         mat_s = "nan" if mat is None else f"{mat}"
-        print(f"{now},{temp},{hum},{int(ok)},{mat_s},{machine.state},{LEVEL[sim.level_of(temp, hum)]}")
+        print(f"{now},{temp},{hum},{int(ok)},{mat_s},{machine.state},{LEVEL[sim.level_of(temp, hum)]},{mode},{until}")
 
 
 if __name__ == "__main__":

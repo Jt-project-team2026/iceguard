@@ -6,6 +6,7 @@ const TYPES = {
   COOLDOWN: { label: "휴식", tone: "neutral" },
   FAULT: { label: "오류", tone: "caution" },
   RECOVERED: { label: "복구", tone: "info" },
+  MODE_CHANGED: { label: "수동 제어", tone: "info" },
 };
 
 export default function EventLog({ events, loading, error }) {

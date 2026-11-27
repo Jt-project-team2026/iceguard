@@ -19,6 +19,21 @@
 | 임의 | 센서 읽기 3회 연속 실패 또는 NaN, 패드 온도 ≥ 60℃ | FAULT |
 | FAULT | 센서 정상 복구 | OFF |
 
+## 관리자 수동 모드
+
+모드는 `AUTO`(기본) / `FORCE_ON` / `FORCE_OFF` 이고, 강제 모드는 지정한 시간(10~600초, 기본 60초)이 지나면 `AUTO` 로 돌아간다.
+서버와 연결이 끊겨도 마지막에 받은 만료 시각이 지나면 `AUTO` 로 돌아간다.
+
+| 모드 | OFF | HEATING |
+|---|---|---|
+| AUTO | 위 표대로 | 위 표대로 |
+| FORCE_ON | 조건과 상관없이 HEATING | 온도 ≥ 5℃ 여도 유지 |
+| FORCE_OFF | 조건이 맞아도 OFF 유지 | 즉시 OFF |
+
+**안전 규칙은 수동 모드에서도 항상 우선한다.**
+- 센서 3회 연속 실패 / 패드 온도 ≥ 60℃ → FAULT (열선 꺼짐)
+- 연속 작동 한도 초과 → COOLDOWN (강제 켜기라도 쉬었다가, 남은 시간이 있으면 다시 켜짐)
+
 ## 이벤트 (서버가 이전 상태와 비교해 생성)
 
-`HEATER_ON`, `HEATER_OFF`, `COOLDOWN`, `FAULT`, `RECOVERED`
+`HEATER_ON`, `HEATER_OFF`, `COOLDOWN`, `FAULT`, `RECOVERED`, `MODE_CHANGED` (관리자 모드 변경 / 시간 만료, API 가 기록)

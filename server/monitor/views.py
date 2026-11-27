@@ -6,14 +6,21 @@ from rest_framework.views import APIView
 from .authentication import HasApiKey, IsAdminPassword
 from .exceptions import ApiError
 from .models import Device, Event, Reading
-from .serializers import EventsQuerySerializer, HistoryQuerySerializer, ReadingInputSerializer
+from .serializers import (
+    CommandInputSerializer,
+    EventsQuerySerializer,
+    HistoryQuerySerializer,
+    ReadingInputSerializer,
+)
 from .services import (
+    command_for_device,
     device_to_dict,
     downsample,
     event_to_dict,
     now_ms,
     reading_to_dict,
     record_reading,
+    set_command,
 )
 
 
@@ -55,7 +62,14 @@ class ReadingCreateView(APIView):
         device = _get_device_or_404(data["device_id"])
         reading, events = record_reading(device, data)
         return Response(
-            {"ok": True, "data": {"ts": reading.ts, "events": [event.type for event in events]}},
+            {
+                "ok": True,
+                "data": {
+                    "ts": reading.ts,
+                    "events": [event.type for event in events],
+                    "command": command_for_device(device),
+                },
+            },
             status=201,
         )
 
@@ -66,6 +80,21 @@ class DeviceListView(APIView):
     def get(self, request):
         devices = Device.objects.order_by("id")
         return Response({"ok": True, "data": [device_to_dict(d) for d in devices]})
+
+
+class CommandView(AdminView):
+    """POST /api/devices/<device_id>/command — 관리자 수동 제어 (자동 / 강제 켜기 / 강제 끄기)
+
+    서버는 모드를 저장만 한다. ESP32 가 다음 측정값 업로드 응답에서 받아 적용하며,
+    과열·센서 오류·연속 작동 한도 같은 안전 규칙은 ESP32 에서 항상 우선한다.
+    """
+
+    def post(self, request, device_id):
+        device = _get_device_or_404(device_id)
+        serializer = CommandInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        return Response({"ok": True, "data": set_command(device, data["mode"], data["duration_sec"])})
 
 
 class HistoryView(AdminView):

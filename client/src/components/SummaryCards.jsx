@@ -1,4 +1,4 @@
-import { HEATER_STATE_LABEL, LEVELS, levelKeyOf } from "../constants";
+import { HEATER_STATE_LABEL, LEVELS, MODE_LABEL, levelKeyOf } from "../constants";
 import { ageText, fmtHum, fmtTemp } from "../utils/format";
 
 export default function SummaryCards({ device }) {
@@ -19,7 +19,10 @@ export default function SummaryCards({ device }) {
       <div className="card">
         <h3>열선 상태</h3>
         <p className="card__value">{offline || !latest ? "—" : HEATER_STATE_LABEL[latest.state]}</p>
-        <p className="card__sub">{offline || !latest ? "알 수 없음" : latest.state}</p>
+        <p className="card__sub">
+          {offline || !latest ? "알 수 없음" : latest.state}
+          {device?.mode && device.mode !== "AUTO" ? ` · 수동(${MODE_LABEL[device.mode]})` : ""}
+        </p>
       </div>
       <div className="card">
         <h3>온도 / 습도</h3>

@@ -54,3 +54,5 @@ export function levelKeyOf(device) {
   if (!device || !device.online || !device.latest) return "offline";
   return LEVEL_BY_TEXT[device.latest.level] ?? "offline";
 }
+
+export const MODE_LABEL = { AUTO: "자동", FORCE_ON: "강제 켜기", FORCE_OFF: "강제 끄기" };

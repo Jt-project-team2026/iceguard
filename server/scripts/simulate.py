@@ -34,18 +34,31 @@ def level_of(temp: float, hum: float) -> str:
 
 
 class HeaterMachine:
-    """OFF → HEATING → (COOLDOWN) → OFF, 어디서든 FAULT."""
+    """OFF → HEATING → (COOLDOWN) → OFF, 어디서든 FAULT.
+
+    관리자 수동 모드(AUTO / FORCE_ON / FORCE_OFF)는 시간 제한이 있고, 안전 규칙(FAULT, 연속 작동 한도)이
+    항상 우선한다. 펌웨어(firmware/iceguard/iceguard_logic.h)가 이 구현과 같은 결과를 내야 한다.
+    """
 
     def __init__(self, profile: dict):
         self.profile = profile
         self.state = "OFF"
         self.since = 0.0
         self.fails = 0
+        self.mode = "AUTO"
+        self.mode_until = 0.0
+
+    def set_mode(self, mode: str, until: float) -> None:
+        """until: 이 시각(now 와 같은 시계)에 수동 모드가 끝난다."""
+        self.mode, self.mode_until = mode, until
 
     def _go(self, state: str, now: float) -> None:
         self.state, self.since = state, now
 
     def update(self, now: float, temp: float, hum: float, sensor_ok: bool, mat_temp: float | None) -> None:
+        if self.mode != "AUTO" and now >= self.mode_until:
+            self.mode = "AUTO"  # 시간 만료
+        forced_on, forced_off = self.mode == "FORCE_ON", self.mode == "FORCE_OFF"
         self.fails = 0 if sensor_ok else self.fails + 1
         overheated = mat_temp is not None and mat_temp >= MAT_LIMIT
         if self.fails >= 3 or overheated:
@@ -57,10 +70,10 @@ class HeaterMachine:
                 self._go("OFF", now)
             return
         if self.state == "OFF":
-            if temp <= 2 and hum >= 70:
+            if forced_on or (not forced_off and temp <= 2 and hum >= 70):
                 self._go("HEATING", now)
         elif self.state == "HEATING":
-            if temp >= 5:
+            if forced_off or (not forced_on and temp >= 5):
                 self._go("OFF", now)
             elif now - self.since >= self.profile["max_run"]:
                 self._go("COOLDOWN", now)
@@ -143,9 +156,13 @@ def main() -> int:
             except (urllib.error.URLError, TimeoutError) as error:
                 print(f"[{now:5.0f}s] 전송 실패 (장치는 계속 동작): {error}")
             else:
+                command = reply.get("data", {}).get("command") or {}
+                if command.get("mode"):
+                    machine.set_mode(command["mode"], now + command.get("remaining_sec", 0))
                 note = reply.get("data", {}).get("events") or reply.get("message", "")
+                mode = f" [{machine.mode}]" if machine.mode != "AUTO" else ""
                 print(f"[{now:5.0f}s] {body['temp']:5.1f}℃ {body['hum']:3d}% {body['level']} "
-                      f"{body['state']:<8} → HTTP {status} {note if note else ''}")
+                      f"{body['state']:<8} → HTTP {status} {note if note else ''}{mode}")
                 sent += 1
                 if status in (401, 404):
                     print("인증 또는 장치 등록 문제입니다. 중단합니다.")

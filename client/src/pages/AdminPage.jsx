@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AdminLogin from "../components/AdminLogin.jsx";
+import ControlPanel from "../components/ControlPanel.jsx";
 import DeviceList from "../components/DeviceList.jsx";
 import EventLog from "../components/EventLog.jsx";
 import HistoryChart from "../components/HistoryChart.jsx";
@@ -18,7 +19,7 @@ const RANGES = [
 ];
 
 function Dashboard({ password, onLogout }) {
-  const { devices, error: devicesError } = useDevices();
+  const { devices, error: devicesError, reload: reloadDevices } = useDevices();
   const [selectedId, setSelectedId] = useState(null);
   const [minutes, setMinutes] = useState(30);
 
@@ -67,6 +68,16 @@ function Dashboard({ password, onLogout }) {
           </div>
 
           <div className="a-col">
+            <ControlPanel
+              device={selected}
+              password={password}
+              onUnauthorized={onLogout}
+              onChanged={() => {
+                reloadDevices();
+                events.reload();
+              }}
+            />
+
             <section className="panel">
               <div className="panel__head">
                 <h2>온도 · 습도 추이{selected ? ` · ${selected.name.replace(" (예시)", "")}` : ""}</h2>

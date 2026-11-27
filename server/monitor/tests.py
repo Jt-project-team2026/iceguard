@@ -326,3 +326,89 @@ class MiscTests(ApiTestBase):
         out = downsample(rows, 360)
         self.assertEqual((len(out), out[0], out[-1]), (360, 0, 999))
         self.assertEqual(downsample(rows[:10], 360), rows[:10])
+
+
+class CommandTests(ApiTestBase):
+    URL = "/api/devices/iceguard-01/command"
+
+    def command(self, body, **headers):
+        return self.client.post(self.URL, body, format="json", **(headers or ADMIN))
+
+    def test_requires_admin_password(self):
+        response = self.client.post(self.URL, {"mode": "FORCE_ON"}, format="json")
+        self.assertEqual(response.status_code, 401)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.mode, "AUTO")
+
+    def test_api_key_is_not_enough(self):
+        response = self.client.post(self.URL, {"mode": "FORCE_ON"}, format="json", **KEY)
+        self.assertEqual(response.status_code, 401)
+
+    def test_unknown_device(self):
+        response = self.client.post("/api/devices/ghost/command", {"mode": "AUTO"}, format="json", **ADMIN)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"], "UNKNOWN_DEVICE")
+
+    def test_invalid_input(self):
+        for bad in ({}, {"mode": "BURN"}, {"mode": "FORCE_ON", "duration_sec": 5},
+                    {"mode": "FORCE_ON", "duration_sec": 601}, {"mode": "FORCE_ON", "duration_sec": "x"}):
+            with self.subTest(bad=bad):
+                response = self.command(bad)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()["error"], "INVALID_INPUT")
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.mode, "AUTO")
+
+    def test_force_on_default_duration_is_60_seconds(self):
+        response = self.command({"mode": "FORCE_ON"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["data"]
+        self.assertEqual(data["mode"], "FORCE_ON")
+        self.assertEqual(data["device_id"], "iceguard-01")
+        self.assertIn(data["remaining_sec"], (59, 60))
+
+    def test_reading_response_carries_command(self):
+        self.command({"mode": "FORCE_OFF", "duration_sec": 120})
+        command = self.post_reading().json()["data"]["command"]
+        self.assertEqual(command["mode"], "FORCE_OFF")
+        self.assertTrue(118 <= command["remaining_sec"] <= 120)
+
+    def test_default_is_auto(self):
+        self.assertEqual(self.post_reading().json()["data"]["command"], {"mode": "AUTO", "remaining_sec": 0})
+
+    def test_auto_cancels_force_mode(self):
+        self.command({"mode": "FORCE_ON", "duration_sec": 300})
+        self.command({"mode": "AUTO"})
+        self.assertEqual(self.post_reading().json()["data"]["command"], {"mode": "AUTO", "remaining_sec": 0})
+        self.device.refresh_from_db()
+        self.assertIsNone(self.device.mode_until)
+
+    def test_mode_change_is_logged(self):
+        self.command({"mode": "FORCE_ON", "duration_sec": 45})
+        event = Event.objects.get()
+        self.assertEqual(event.type, "MODE_CHANGED")
+        self.assertEqual(event.detail, "자동 → 강제 켜기 (45초)")
+        self.command({"mode": "AUTO"})
+        self.assertEqual(Event.objects.first().detail, "강제 켜기 → 자동")
+
+    def test_devices_list_shows_mode(self):
+        self.assertEqual(self.client.get("/api/devices").json()["data"][0]["mode"], "AUTO")
+        self.command({"mode": "FORCE_ON", "duration_sec": 60})
+        device = self.client.get("/api/devices").json()["data"][0]
+        self.assertEqual(device["mode"], "FORCE_ON")
+        self.assertTrue(0 < device["mode_remaining_sec"] <= 60)
+
+    def test_expired_mode_returns_to_auto_and_logs_once(self):
+        with mock.patch("monitor.services.now_ms", return_value=1_000_000):
+            self.command({"mode": "FORCE_ON", "duration_sec": 60})
+        with mock.patch("monitor.services.now_ms", return_value=1_000_000 + 59_000):
+            self.assertEqual(self.client.get("/api/devices").json()["data"][0]["mode"], "FORCE_ON")
+        with mock.patch("monitor.services.now_ms", return_value=1_000_000 + 61_000):
+            # 목록은 DB 를 건드리지 않고 만료된 모드를 AUTO 로 보여 준다
+            self.assertEqual(self.client.get("/api/devices").json()["data"][0]["mode"], "AUTO")
+            self.assertEqual(Event.objects.count(), 1)
+            command = self.post_reading().json()["data"]["command"]
+            self.post_reading()
+        self.assertEqual(command, {"mode": "AUTO", "remaining_sec": 0})
+        expired = Event.objects.filter(detail__contains="만료")
+        self.assertEqual(expired.count(), 1)  # 두 번 보고해도 이벤트는 한 번만

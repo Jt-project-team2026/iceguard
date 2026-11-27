@@ -4,7 +4,7 @@ import time
 from django.conf import settings
 from django.db import transaction
 
-from .models import Device, Event, EventType, HeaterState, Reading
+from .models import Device, Event, EventType, HeaterMode, HeaterState, Reading
 
 
 def now_ms() -> int:
@@ -25,11 +25,17 @@ def derive_events(prev_state: str, reading: Reading) -> list[tuple[str, str]]:
         events.append((EventType.RECOVERED, "정상 수신 재개"))
 
     if new_state == HeaterState.HEATING:
-        events.append((EventType.HEATER_ON, f"{reading.temp:.1f}℃ · 습도 {reading.hum:.0f}%"))
+        if reading.level == "위험":
+            events.append((EventType.HEATER_ON, f"{reading.temp:.1f}℃ · 습도 {reading.hum:.0f}%"))
+        else:
+            events.append((EventType.HEATER_ON, "수동 제어로 작동"))
     elif new_state == HeaterState.COOLDOWN:
         events.append((EventType.COOLDOWN, "연속 작동 한도 도달, 휴식"))
     elif new_state == HeaterState.OFF and prev_state == HeaterState.HEATING:
-        events.append((EventType.HEATER_OFF, f"{reading.temp:.1f}℃ 도달"))
+        if reading.temp >= 5:
+            events.append((EventType.HEATER_OFF, f"{reading.temp:.1f}℃ 도달"))
+        else:
+            events.append((EventType.HEATER_OFF, "수동 제어로 정지"))
     return events
 
 
@@ -56,6 +62,43 @@ def record_reading(device: Device, data: dict) -> tuple[Reading, list[Event]]:
     return reading, events
 
 
+def effective_mode(device: Device, now: int | None = None) -> tuple[str, int]:
+    """(현재 유효한 모드, 남은 초). 만료됐으면 (AUTO, 0). DB 는 바꾸지 않는다."""
+    now = now_ms() if now is None else now
+    if device.mode != HeaterMode.AUTO and device.mode_until is not None and device.mode_until > now:
+        return device.mode, max(1, -(-(device.mode_until - now) // 1000))  # 올림
+    return HeaterMode.AUTO, 0
+
+
+def command_for_device(device: Device) -> dict:
+    """ESP32 에 돌려줄 명령. 만료된 수동 모드는 여기서 AUTO 로 되돌리고 이벤트를 남긴다."""
+    now = now_ms()
+    mode, remaining = effective_mode(device, now)
+    if device.mode != HeaterMode.AUTO and mode == HeaterMode.AUTO:
+        label = HeaterMode(device.mode).label
+        device.mode, device.mode_until = HeaterMode.AUTO, None
+        device.save(update_fields=["mode", "mode_until"])
+        Event.objects.create(device=device, ts=now, type=EventType.MODE_CHANGED, detail=f"{label} 시간 만료, 자동으로 복귀")
+    return {"mode": mode, "remaining_sec": remaining}
+
+
+@transaction.atomic
+def set_command(device: Device, mode: str, duration_sec: int) -> dict:
+    now = now_ms()
+    previous, _ = effective_mode(device, now)
+    if mode == HeaterMode.AUTO:
+        device.mode, device.mode_until = HeaterMode.AUTO, None
+    else:
+        device.mode, device.mode_until = mode, now + duration_sec * 1000
+    device.save(update_fields=["mode", "mode_until"])
+
+    detail = f"{HeaterMode(previous).label} → {HeaterMode(mode).label}"
+    if mode != HeaterMode.AUTO:
+        detail += f" ({duration_sec}초)"
+    Event.objects.create(device=device, ts=now, type=EventType.MODE_CHANGED, detail=detail)
+    return {"device_id": device.device_id, **command_for_device(device)}
+
+
 def latest_reading(device: Device) -> Reading | None:
     return device.readings.order_by("-ts", "-id").first()
 
@@ -79,6 +122,7 @@ def device_to_dict(device: Device) -> dict:
     latest = latest_reading(device)
     latest_body = reading_to_dict(latest, with_age=True) if latest else None
     online = latest_body is not None and latest_body["age_sec"] <= settings.OFFLINE_SEC
+    mode, remaining = effective_mode(device)
     return {
         "device_id": device.device_id,
         "name": device.name,
@@ -86,6 +130,8 @@ def device_to_dict(device: Device) -> dict:
         "lng": device.lng,
         "latest": latest_body,
         "online": online,
+        "mode": mode,
+        "mode_remaining_sec": remaining,
     }
 
 

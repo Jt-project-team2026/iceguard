@@ -25,11 +25,14 @@ int main(int argc, char **argv) {
     long sec;
     float temp, hum, mat;
     int ok;
-    char st[32], lv[32];
-    if (std::sscanf(line.c_str(), "%ld,%f,%f,%d,%f,%31[^,],%31s", &sec, &temp, &hum, &ok, &mat, st, lv) != 7) {
+    char st[32], lv[32], md[32];
+    long until;
+    if (std::sscanf(line.c_str(), "%ld,%f,%f,%d,%f,%31[^,],%31[^,],%31[^,],%ld", &sec, &temp, &hum, &ok, &mat, st, lv, md, &until) != 9) {
       std::fprintf(stderr, "형식 오류: %s\n", line.c_str());
       return 2;
     }
+    machine.setMode(!std::strcmp(md, "FORCE_ON") ? ig::Mode::FORCE_ON : !std::strcmp(md, "FORCE_OFF") ? ig::Mode::FORCE_OFF : ig::Mode::AUTO,
+                    (uint32_t)(until * 1000));
     machine.update((uint32_t)(sec * 1000), temp, hum, ok != 0, mat);
     const char *gotState = ig::stateName(machine.state());
     const char *gotLevel = levelEn(ig::levelOf(temp, hum));

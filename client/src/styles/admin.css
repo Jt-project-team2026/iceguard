@@ -424,3 +424,57 @@ td.muted {
     padding-right: 16px;
   }
 }
+
+/* ---- 수동 제어 ---- */
+.ctl-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ctl-btn {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #f5f7fa;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ctl-btn--on {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.ctl-btn--off {
+  border-color: var(--text);
+  background: var(--text);
+  color: #fff;
+}
+.ctl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ctl-dur {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.ctl-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ctl-error {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 2px;
+  background: #fde6e3;
+  color: #9e1f15;
+  font-size: 13px;
+  font-weight: 500;
+}
