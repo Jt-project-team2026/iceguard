@@ -1,0 +1,32 @@
+# --- 비밀값 (절대 커밋 금지) ---
+firmware/config.h
+server/.env
+client/.env
+client/.env.local
+.env
+.env.*
+!.env.example
+
+# --- Python / Django ---
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+server/db.sqlite3
+server/staticfiles/
+
+# --- Node / React ---
+client/node_modules/
+client/dist/
+node_modules/
+
+# --- 에디터 / OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- AI 도구 작업 파일 ---
+.claude/
+CLAUDE.md
