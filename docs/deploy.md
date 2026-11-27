@@ -6,7 +6,7 @@
 | 프론트 | Vercel (Hobby, 무료) | `client/` 폴더를 배포 |
 | 지도 | Kakao Developers (JavaScript 키) | 키가 없어도 간이 지도로 동작 |
 
-> 프론트(Vercel)는 조직(org) 레포가 아니라 **개인 레포 `yoonjay06/iceguard`** 에서 배포합니다. (Vercel Hobby 는 조직 소유 비공개 레포 연동에 제한이 있어서, 개인 레포가 가장 단순합니다.)
+> 프론트(Vercel)는 개인 레포(`yoonjay06/iceguard`) 또는 **공개(public) 조직 레포**(`Jt-project-team2026/iceguard`) 어느 쪽에서든 Hobby 플랜으로 배포할 수 있습니다. 비공개 조직 레포는 Pro 플랜이 필요하므로, 레포를 비공개로 돌리면 배포가 막힙니다. 조직 레포로 배포할 때는 Vercel GitHub 앱을 **조직에 설치**(조직 Owner 권한 필요)해야 합니다.
 
 ## 무료 플랜 특징 (발표 전에 꼭 읽기)
 
@@ -51,7 +51,7 @@ python scripts\simulate.py --url https://<서버주소> --api-key <API_KEY> --du
 ## 3. Vercel 가입 + 프론트 배포
 
 1. https://vercel.com → **Sign Up** → 플랜 **Hobby** 선택 → **Continue with GitHub** (개인 계정)
-2. **Add New… → Project** → `yoonjay06/iceguard` **Import** (안 보이면 *Adjust GitHub App Permissions* 에서 레포 허용)
+2. **Add New… → Project** → 왼쪽 계정 드롭다운에서 `Jt-project-team2026` 선택 → `iceguard` **Import**. 조직이 안 보이면 *Add GitHub Account / Adjust GitHub App Permissions* 로 Vercel 앱을 조직에 설치하고 `iceguard` 레포를 허용
 3. 설정 화면에서:
    - **Root Directory**: `client` 로 변경 (Edit 버튼)
    - **Framework Preset**: Vite (자동 인식)
